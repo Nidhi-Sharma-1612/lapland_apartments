@@ -96,17 +96,38 @@ function mapListingToApartment(
     reviewCount: reviewCounts?.get(listing.id) ?? listing.reviewsCount ?? 0,
     imageUrl: images[0],
     bedroomsNumber: listing.bedroomsNumber,
+    minNights: listing.minNights,
   };
 }
 
 function formatHour(hour: number): string {
   const period = hour >= 12 ? "PM" : "AM";
   const displayHour = hour % 12 === 0 ? 12 : hour % 12;
-  return `${String(hour).padStart(2, "0")}:00 (${displayHour} ${period})`;
+  return `${displayHour} ${period}`;
 }
 
 function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** Hostaway's 4 cancellation-policy tiers are a fixed, platform-standard
+ * naming (mirroring Airbnb's own tiers) rather than a per-listing custom
+ * refund schedule — the tier name alone ("flexible", "strict", ...) doesn't
+ * tell a guest what it actually means, so translate it into the standard
+ * terms for that tier instead of just capitalizing the raw value. */
+function describeCancellationPolicy(policy: string): string {
+  switch (policy.toLowerCase()) {
+    case "flexible":
+      return "Full refund if cancelled at least 24 hours before check-in.";
+    case "moderate":
+      return "Full refund if cancelled at least 14 days before check-in. No refund after that.";
+    case "firm":
+      return "Full refund 30+ days before check-in. 50% refund 7–30 days before. No refund within 7 days of arrival.";
+    case "strict":
+      return "50% refund if cancelled at least 30 days before check-in. No refund after that.";
+    default:
+      return `${capitalize(policy)} cancellation policy.`;
+  }
 }
 
 /** Prefers Hostaway's pre-formatted address fields; falls back to
@@ -145,23 +166,59 @@ function buildHouseRules(listing: HostawayListing): { title: string; description
   if (listing.cancellationPolicy) {
     rules.push({
       title: "Cancellation Policy",
-      description: `${capitalize(listing.cancellationPolicy)} cancellation policy.`,
+      description: describeCancellationPolicy(listing.cancellationPolicy),
     });
   }
 
-  const petAmenity = (listing.listingAmenities ?? []).find((a) => /pet/i.test(a.amenityName ?? ""));
-  if (petAmenity?.amenityName) {
-    rules.push({ title: "Pets", description: petAmenity.amenityName });
-  }
+  // Hostaway has no per-listing data for these across this entire account
+  // (`maxPetsAllowed`/`maxChildrenAllowed`/`maxInfantsAllowed` are null on
+  // every listing, and there's no field at all for smoking or events) — the
+  // real booking site applies the same policy to every property, confirmed
+  // against its own live House Rules panel. Prefer a real per-listing value
+  // if Hostaway ever populates one; fall back to that confirmed policy.
+  rules.push({
+    title: "Pets",
+    description: describeAllowance(listing.maxPetsAllowed, false),
+  });
+  rules.push({ title: "Smoking inside", description: "Not allowed." });
+  rules.push({
+    title: "Children",
+    description: describeAllowance(listing.maxChildrenAllowed, true),
+  });
+  rules.push({
+    title: "Infants",
+    description: describeAllowance(listing.maxInfantsAllowed, true),
+  });
+  rules.push({ title: "Parties and events", description: "Not allowed." });
 
-  const smokingAmenity = (listing.listingAmenities ?? []).find((a) =>
-    /smoking/i.test(a.amenityName ?? ""),
-  );
-  if (smokingAmenity?.amenityName) {
-    rules.push({ title: "Smoking", description: smokingAmenity.amenityName });
-  }
+  return rules;
+}
 
-  return rules.length > 0 ? rules : MOCK_APARTMENT_DETAIL.houseRules;
+/** `undefined`/`null` means Hostaway has no per-listing value set — falls
+ * back to `defaultAllowed`. `0` means explicitly not allowed; any other
+ * number means allowed (up to that many). */
+function describeAllowance(maxAllowed: number | null | undefined, defaultAllowed: boolean): string {
+  if (maxAllowed == null) return defaultAllowed ? "Allowed." : "Not allowed.";
+  return maxAllowed > 0 ? "Allowed." : "Not allowed.";
+}
+
+/** `listing.price` (`Apartment.pricePerNight`'s source) is a generic/base
+ * rate set on the listing itself — it can drift far from what the listing
+ * actually costs on real dates, since day-to-day pricing lives in the
+ * calendar instead. Prefer the lowest real nightly rate found in the
+ * calendar, so a "From €X" display reflects an actually-bookable price.
+ * Falls back to the given apartment's base rate if no calendar data came
+ * back (e.g. Hostaway request failed, or the listing has no upcoming
+ * calendar entries). Shared by every place that shows a listing's price
+ * outside of a specific selected date range (detail page headline, the
+ * apartments grid, featured apartments) so they never drift apart. */
+export async function withRealPricePerNight<T extends Apartment>(apartment: T): Promise<T> {
+  const listingId = Number(apartment.id);
+  if (!Number.isFinite(listingId)) return apartment;
+  const nightlyPrices = await getNightlyPrices(listingId);
+  const values = Object.values(nightlyPrices);
+  if (values.length === 0) return apartment;
+  return { ...apartment, pricePerNight: Math.min(...values) };
 }
 
 async function mapListingToApartmentDetail(listing: HostawayListing): Promise<ApartmentDetail> {
@@ -183,8 +240,18 @@ async function mapListingToApartmentDetail(listing: HostawayListing): Promise<Ap
     console.error(`[hostaway] Failed to fetch calendar for listing ${listing.id}:`, error);
   }
 
+  // `listing.price` (used for `base.pricePerNight`) is a generic/base rate
+  // set on the listing itself — it can drift far from what the listing
+  // actually costs on real dates, since day-to-day pricing lives in the
+  // calendar instead. Prefer the lowest real nightly rate we just fetched
+  // for the "From €X" headline, so it reflects an actually-bookable price.
+  const nightlyPriceValues = Object.values(nightlyPrices);
+  const pricePerNight =
+    nightlyPriceValues.length > 0 ? Math.min(...nightlyPriceValues) : base.pricePerNight;
+
   return {
     ...base,
+    pricePerNight,
     heroImageUrl: images[0],
     galleryImages: images,
     totalImageCount: images.length,
@@ -291,10 +358,15 @@ export const getAllApartments = cache(async (): Promise<Apartment[]> => {
 export const getFeaturedApartments = cache(async (): Promise<Apartment[]> => {
   const all = await getAllApartments();
   if (all === MOCK_ALL_APARTMENTS) return MOCK_FEATURED_APARTMENTS;
-  return [...all]
+  const featured = [...all]
     .filter((a) => Boolean(a.imageUrl))
     .sort((a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount)
     .slice(0, 6);
+  // Only 6 listings, so a real calendar fetch per card is cheap — same
+  // "From €X" accuracy fix as the apartment detail page and the apartments
+  // grid, so the homepage doesn't show a stale price the detail page then
+  // contradicts.
+  return Promise.all(featured.map(withRealPricePerNight));
 });
 
 export type PortfolioStats = {

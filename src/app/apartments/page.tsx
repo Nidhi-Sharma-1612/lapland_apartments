@@ -1,5 +1,8 @@
-import { getAllApartments, getPortfolioStats } from "@/lib/hostaway/listings";
-import { parseISODate, formatShortDate } from "@/lib/date-utils";
+import { getAllApartments, getPortfolioStats, withRealPricePerNight } from "@/lib/hostaway/listings";
+import { getBookedDates, getNightlyPrices } from "@/lib/hostaway/calendar";
+import { isHostawayConfigured } from "@/lib/hostaway/config";
+import { computeStayTotal } from "@/lib/booking-price";
+import { parseISODate, formatShortDate, rangeOverlapsBookedDates } from "@/lib/date-utils";
 import { LOCATIONS } from "@/lib/locations";
 import { ApartmentsPageHero } from "@/components/apartments/ApartmentsPageHero";
 import { ApartmentsGrid } from "@/components/apartments/ApartmentsGrid";
@@ -50,6 +53,43 @@ export default async function ApartmentsPage({
     return true;
   });
 
+  // Real per-listing availability, not just guest/bedroom/location matches —
+  // without this, every listing showed up regardless of dates (151 results
+  // for any date range), unlike the real booking engine which only shows
+  // what's actually bookable for those dates. While we're already fetching
+  // each candidate's real calendar for this, also swap in the actual
+  // average nightly rate for the requested stay — `pricePerNight` alone is
+  // a generic/base rate that can be wildly off from what these specific
+  // dates really cost (see the apartment detail page for the same fix).
+  if (checkInRaw && checkOutRaw && checkIn && checkOut && isHostawayConfigured()) {
+    const nights = Math.round(
+      (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    const results = await Promise.all(
+      apartments.map(async (apartment) => {
+        const listingId = Number(apartment.id);
+        if (!Number.isFinite(listingId)) return { available: true, pricePerNight: apartment.pricePerNight };
+
+        const [bookedDates, nightlyPrices] = await Promise.all([
+          getBookedDates(listingId),
+          getNightlyPrices(listingId),
+        ]);
+        const available = !rangeOverlapsBookedDates(checkInRaw, checkOutRaw, bookedDates);
+
+        let pricePerNight = apartment.pricePerNight;
+        if (nights > 0) {
+          const total = computeStayTotal(checkInRaw, checkOutRaw, nightlyPrices, apartment.pricePerNight);
+          if (total > 0) pricePerNight = Math.round((total / nights) * 100) / 100;
+        }
+        return { available, pricePerNight };
+      }),
+    );
+    apartments = apartments
+      .map((apartment, i) => ({ apartment, result: results[i] }))
+      .filter(({ result }) => result.available)
+      .map(({ apartment, result }) => ({ ...apartment, pricePerNight: result.pricePerNight }));
+  }
+
   if (sort === "price-asc") {
     apartments = [...apartments].sort((a, b) => a.pricePerNight - b.pricePerNight);
   } else if (sort === "price-desc") {
@@ -66,6 +106,19 @@ export default async function ApartmentsPage({
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE,
   );
+  // When no dates were searched, `pricePerNight` is still the generic base
+  // rate from Hostaway (see the apartment detail page for why that's
+  // unreliable) — only the current 24-card page gets swapped to the real
+  // minimum nightly rate from each listing's calendar, so this doesn't cost
+  // a calendar fetch per listing across the full, unfiltered portfolio.
+  // (The dated-search branch above already fixes this — for every matching
+  // result, not just the current page — since it needs each candidate's
+  // calendar anyway to check availability.)
+  let displayedApartments = pagedApartments;
+  if (!(checkInRaw && checkOutRaw) && isHostawayConfigured()) {
+    displayedApartments = await Promise.all(pagedApartments.map(withRealPricePerNight));
+  }
+
   const pageHref = (page: number) =>
     buildHref({ ...baseParams, page: page > 1 ? String(page) : undefined });
   // Functions can't cross the server/client boundary — precompute the plain
@@ -128,7 +181,7 @@ export default async function ApartmentsPage({
       <main className="flex flex-1 flex-col bg-white">
         <ApartmentsPageHero apartmentCountDisplay={stats.apartmentCountDisplay} />
         <ApartmentsGrid
-          apartments={pagedApartments}
+          apartments={displayedApartments}
           totalCount={totalCount}
           pageSize={PAGE_SIZE}
           currentPage={currentPage}

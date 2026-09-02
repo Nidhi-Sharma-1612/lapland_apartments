@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { motion } from "framer-motion";
@@ -10,6 +10,7 @@ import { Container } from "@/components/layout/Container";
 import { SortSelect } from "@/components/shared/SortSelect";
 import { staggerItem } from "@/lib/motion-variants";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/lib/use-is-mobile";
 import type { Variants } from "framer-motion";
 
 const SORT_OPTIONS = [
@@ -21,19 +22,6 @@ const SORT_OPTIONS = [
 
 export type AppliedFilter = { label: string; href: string };
 export type QuickLocation = { label: string; href: string; active: boolean };
-
-const MOBILE_QUERY = "(max-width: 639px)";
-function subscribeToMobileQuery(callback: () => void) {
-  const mql = window.matchMedia(MOBILE_QUERY);
-  mql.addEventListener("change", callback);
-  return () => mql.removeEventListener("change", callback);
-}
-function getIsMobileSnapshot() {
-  return window.matchMedia(MOBILE_QUERY).matches;
-}
-function getIsMobileServerSnapshot() {
-  return false;
-}
 
 /** A results grid can hold anywhere from 1 to 150+ real listings. The shared
  * `staggerContainer`/`revealViewport` pattern breaks at that scale: with
@@ -95,11 +83,7 @@ export function ApartmentsGrid({
   // after mount to avoid a hydration mismatch — real Pagination below still
   // handles jumping between server pages of `pageSize`.
   const MOBILE_STEP = 6;
-  const isMobile = useSyncExternalStore(
-    subscribeToMobileQuery,
-    getIsMobileSnapshot,
-    getIsMobileServerSnapshot,
-  );
+  const isMobile = useIsMobile();
   const [mobileVisibleCount, setMobileVisibleCount] = useState(MOBILE_STEP);
   const [lastPageKey, setLastPageKey] = useState<string | null>(null);
   const pageKey = `${currentPage}-${apartments.map((a) => a.id).join(",")}`;

@@ -1,5 +1,15 @@
 import Link from "next/link";
-import { ArrowLeft, BedDouble, DoorOpen, Home, MapPin, ShowerHead, Star, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  BedDouble,
+  CalendarDays,
+  DoorOpen,
+  Home,
+  MapPin,
+  ShowerHead,
+  Star,
+  Users,
+} from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Container } from "@/components/layout/Container";
 import { SearchBar } from "@/components/home/SearchBar";
@@ -89,6 +99,12 @@ export function ApartmentHero({
               <MapPin className="h-4 w-4" aria-hidden />
               {apartment.location}
             </span>
+            {typeof apartment.minNights === "number" && apartment.minNights > 1 && (
+              <span className="flex items-center gap-2">
+                <CalendarDays className="h-4 w-4" aria-hidden />
+                Min {apartment.minNights} nights
+              </span>
+            )}
           </div>
         </Container>
       </div>

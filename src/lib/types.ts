@@ -11,6 +11,9 @@ export type Apartment = {
   reviewCount: number;
   imageUrl?: string;
   bedroomsNumber?: number;
+  /** Real per-listing minimum-stay requirement from Hostaway. Undefined for
+   * mock/placeholder listings. */
+  minNights?: number;
 };
 
 export type ApartmentDetail = Apartment & {

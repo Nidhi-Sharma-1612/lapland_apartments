@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getApartmentDetailBySlug } from "@/lib/hostaway/listings";
 import { isHostawayConfigured } from "@/lib/hostaway/config";
 import { computeStayTotal } from "@/lib/booking-price";
-import { addDays, parseISODate, toISODate } from "@/lib/date-utils";
+import { parseISODate, rangeOverlapsBookedDates } from "@/lib/date-utils";
 import { stripe } from "@/lib/stripe/client";
 
 type CheckoutRequestBody = {
@@ -71,16 +71,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const bookedSet = new Set(apartment.bookedDates ?? []);
-  let cursor = checkInDate;
-  while (cursor.getTime() < checkOutDate.getTime()) {
-    if (bookedSet.has(toISODate(cursor))) {
-      return NextResponse.json(
-        { error: "Those dates are no longer available." },
-        { status: 409 },
-      );
-    }
-    cursor = addDays(cursor, 1);
+  if (rangeOverlapsBookedDates(checkIn, checkOut, apartment.bookedDates)) {
+    return NextResponse.json({ error: "Those dates are no longer available." }, { status: 409 });
   }
 
   const totalPrice = computeStayTotal(checkIn, checkOut, apartment.nightlyPrices, apartment.pricePerNight);

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, Home, MapPin, Star, Users } from "lucide-react";
+import { ArrowUpRight, CalendarDays, Home, MapPin, Star, Users } from "lucide-react";
 import type { Apartment } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ratingLabel } from "@/lib/rating-label";
@@ -59,6 +59,12 @@ export function PropertyCard({
           <MapPin className="h-4 w-4" aria-hidden />
           {apartment.location}
         </span>
+        {typeof apartment.minNights === "number" && apartment.minNights > 1 && (
+          <span className="flex items-center gap-1.5">
+            <CalendarDays className="h-4 w-4" aria-hidden />
+            Min {apartment.minNights} nights
+          </span>
+        )}
       </div>
 
       <div className="mt-auto flex flex-col items-start gap-3 border-t border-zinc-200 pt-4 sm:flex-row sm:items-center sm:justify-between">

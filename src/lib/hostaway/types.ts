@@ -46,8 +46,12 @@ export type HostawayListing = {
   checkInTimeStart?: number;
   checkInTimeEnd?: number | null;
   checkOutTime?: number;
+  minNights?: number;
   cancellationPolicy?: string;
   houseRules?: string;
+  maxPetsAllowed?: number | null;
+  maxChildrenAllowed?: number | null;
+  maxInfantsAllowed?: number | null;
   listingImages?: HostawayListingImage[];
   listingAmenities?: HostawayAmenity[];
   status?: string;

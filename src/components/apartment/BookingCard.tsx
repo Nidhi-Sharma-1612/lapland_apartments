@@ -4,6 +4,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { Check } from "lucide-react";
 import type { ApartmentDetail } from "@/lib/types";
 import { computeStayTotal } from "@/lib/booking-price";
+import { rangeOverlapsBookedDates } from "@/lib/date-utils";
 import { DateRangePicker } from "@/components/booking/DateRangePicker";
 import { GuestsSelector, type GuestCounts } from "@/components/booking/GuestsSelector";
 
@@ -25,8 +26,13 @@ export function BookingCard({
   initialCheckOut?: string;
   initialGuests?: number;
 }) {
-  const [checkIn, setCheckIn] = useState(initialCheckIn);
-  const [checkOut, setCheckOut] = useState(initialCheckOut);
+  const initialDatesAvailable = !rangeOverlapsBookedDates(
+    initialCheckIn,
+    initialCheckOut,
+    apartment.bookedDates,
+  );
+  const [checkIn, setCheckIn] = useState(initialDatesAvailable ? initialCheckIn : "");
+  const [checkOut, setCheckOut] = useState(initialDatesAvailable ? initialCheckOut : "");
   const [guests, setGuests] = useState<GuestCounts>({
     adults: initialGuests > 0 ? initialGuests : 1,
     children: 0,
@@ -49,9 +55,7 @@ export function BookingCard({
   }, [checkIn, checkOut]);
 
   const totalPrice =
-    nights > 0
-      ? computeStayTotal(checkIn, checkOut, apartment.nightlyPrices, apartment.pricePerNight)
-      : apartment.pricePerNight * 5;
+    nights > 0 ? computeStayTotal(checkIn, checkOut, apartment.nightlyPrices, apartment.pricePerNight) : 0;
 
   function updateDetail(field: keyof GuestDetails, value: string) {
     setDetails((prev) => ({ ...prev, [field]: value }));
@@ -118,11 +122,24 @@ export function BookingCard({
       }}
     >
       <div>
-        <p className="text-3xl font-semibold">From €{apartment.pricePerNight}</p>
+        {nights > 0 ? (
+          <p className="text-3xl font-semibold">
+            €{Math.round((totalPrice / nights) * 100) / 100}
+            <span className="text-base font-normal text-white/60"> / night</span>
+          </p>
+        ) : (
+          <p className="text-3xl font-semibold">From €{apartment.pricePerNight}</p>
+        )}
         <p className="mt-1 text-sm text-white/60">Includes taxes and service fees.</p>
       </div>
 
       <div className="flex flex-col gap-3">
+        {!initialDatesAvailable && initialCheckIn && (
+          <p className="text-xs text-amber-300">
+            Your selected dates aren&apos;t available for this apartment — please choose new
+            dates.
+          </p>
+        )}
         <DateRangePicker
           checkIn={checkIn}
           checkOut={checkOut}
@@ -177,10 +194,16 @@ export function BookingCard({
       </div>
 
       <div className="flex items-center justify-between border-t border-white/15 pt-4">
-        <span className="text-sm text-white/70">
-          {nights > 0 ? `${nights} ${nights === 1 ? "night" : "nights"}` : "Total price"}
-        </span>
-        <span className="text-2xl font-semibold">€{totalPrice}</span>
+        {nights > 0 ? (
+          <>
+            <span className="text-sm text-white/70">
+              {nights} {nights === 1 ? "night" : "nights"}
+            </span>
+            <span className="text-2xl font-semibold">€{totalPrice}</span>
+          </>
+        ) : (
+          <span className="text-sm text-white/70">Select dates to see the total price</span>
+        )}
       </div>
 
       {submitError && <p className="text-sm text-red-300">{submitError}</p>}
