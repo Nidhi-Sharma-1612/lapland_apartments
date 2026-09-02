@@ -108,10 +108,3 @@ npm run build    # production build
 npm run start    # run the production build
 npm run lint     # eslint
 ```
-
-## Deployment
-
-Deploys as a standard Next.js app (e.g. on [Vercel](https://vercel.com/new)).
-Set the environment variables above in your hosting provider's dashboard, and
-point the Stripe webhook endpoint at `/api/webhooks/stripe` once you set one
-up (optional — see "Payment flow" above).
