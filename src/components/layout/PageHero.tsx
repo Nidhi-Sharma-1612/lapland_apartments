@@ -20,7 +20,7 @@ export function PageHero({
   children?: ReactNode;
 }) {
   return (
-    <section className="relative overflow-hidden text-white">
+    <section className="relative text-white">
       <Header />
 
       <div
