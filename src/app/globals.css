@@ -64,3 +64,15 @@ body {
 .thin-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: rgba(255, 255, 255, 0.55);
 }
+
+/* Fully hides a scrollbar on an internally-scrolling panel (e.g. a
+   horizontal card carousel) while keeping it scrollable — for carousels
+   where swipe/drag/arrow controls are the intended interaction, not a
+   visible scrollbar track. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

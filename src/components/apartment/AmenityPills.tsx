@@ -19,8 +19,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { revealViewport, staggerContainer, staggerItem } from "@/lib/motion-variants";
 
 const ICONS: Record<string, LucideIcon> = {
   sauna: Flame,
@@ -82,27 +80,20 @@ export function AmenityPills({
 
   return (
     <div>
-      <motion.div
-        variants={staggerContainer}
-        initial="hidden"
-        whileInView="show"
-        viewport={revealViewport}
-        className="flex flex-wrap gap-3"
-      >
+      <div className="flex flex-wrap gap-3">
         {visibleItems.map((item) => {
           const Icon = matchIconByLabel(item.label) ?? ICONS[item.icon] ?? Tv;
           return (
-            <motion.span
+            <span
               key={item.label}
-              variants={staggerItem}
               className="flex items-center gap-2.5 rounded-2xl border border-zinc-200 px-5 py-3.5 text-sm font-medium text-zinc-700"
             >
               <Icon className="h-4 w-4 shrink-0 text-zinc-500" aria-hidden />
               {item.label}
-            </motion.span>
+            </span>
           );
         })}
-      </motion.div>
+      </div>
 
       {shouldTruncate && (
         <button

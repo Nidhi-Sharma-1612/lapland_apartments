@@ -80,7 +80,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Could not calculate a price for these dates." }, { status: 400 });
   }
 
-  const origin = new URL(request.url).origin;
+  // `request.url`'s origin reflects the server's bind address (e.g.
+  // 0.0.0.0 in some dev/hosting setups), not the host the browser actually
+  // used — that would send Stripe's redirect back to an unreachable URL.
+  // Prefer an explicit production URL, then the actual request Host header.
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const host = forwardedHost ?? request.headers.get("host");
+  const protocol = request.headers.get("x-forwarded-proto") ?? new URL(request.url).protocol.replace(":", "");
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? (host ? `${protocol}://${host}` : new URL(request.url).origin);
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",

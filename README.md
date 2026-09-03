@@ -51,6 +51,12 @@ Open [http://localhost:3000](http://localhost:3000) to view the site.
 Create a `.env.local` file with:
 
 ```bash
+# The site's real public URL, used to build the Stripe Checkout redirect
+# (success/cancel) links. Without it, the redirect falls back to the
+# request's Host header, which can resolve to an unreachable address
+# (e.g. 0.0.0.0) behind some hosting/proxy setups.
+NEXT_PUBLIC_SITE_URL=
+
 # Hostaway (listings, availability, pricing, reviews, reservations)
 HOSTAWAY_CLIENT_ID=
 HOSTAWAY_CLIENT_SECRET=

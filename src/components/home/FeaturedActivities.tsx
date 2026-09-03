@@ -26,6 +26,13 @@ const ACTIVITIES = [
     href: "https://booklapland.fi/holiday-packages-lapland/",
     imageUrl: "/images/featured-santa-village.jpg",
   },
+  {
+    title: "SkyView Igloo Resort",
+    description: "Glass-ceiling igloos with front-row views of the aurora, just outside Rovaniemi.",
+    href: "https://skyviewigloos.com/",
+    imageUrl:
+      "https://skyviewigloos.com/wp-content/uploads/2026/05/blue-moment-skyview-igloo-resort-rovaniemi-lapland-finland.webp",
+  },
 ];
 
 export function FeaturedActivities() {
@@ -77,39 +84,26 @@ export function FeaturedActivities() {
         ))}
       </motion.div>
 
-      {/* Tablet and up: two large boxes on top, one centered below */}
+      {/* Tablet and up: a clean 2x2 grid */}
       <motion.div
         variants={staggerContainer}
         initial="hidden"
         whileInView="show"
         viewport={revealViewport}
-        className="mt-10 hidden md:flex md:flex-col md:gap-4 md:mt-12 lg:gap-6"
+        className="mt-10 hidden md:grid md:grid-cols-2 md:gap-4 md:mt-12 lg:gap-6"
       >
-        <div className="grid grid-cols-2 gap-4 lg:gap-6">
-          {ACTIVITIES.slice(0, 2).map((activity) => (
-            <motion.div key={activity.title} variants={staggerItem} className="aspect-video">
-              <ActivityTile
-                href={activity.href}
-                title={activity.title}
-                description={activity.description}
-                imageUrl={activity.imageUrl}
-                showArrow
-                external
-              />
-            </motion.div>
-          ))}
-        </div>
-
-        <motion.div variants={staggerItem} className="mx-auto aspect-video w-full md:w-3/5">
-          <ActivityTile
-            href={ACTIVITIES[2].href}
-            title={ACTIVITIES[2].title}
-            description={ACTIVITIES[2].description}
-            imageUrl={ACTIVITIES[2].imageUrl}
-            showArrow
-            external
-          />
-        </motion.div>
+        {ACTIVITIES.map((activity) => (
+          <motion.div key={activity.title} variants={staggerItem} className="aspect-video">
+            <ActivityTile
+              href={activity.href}
+              title={activity.title}
+              description={activity.description}
+              imageUrl={activity.imageUrl}
+              showArrow
+              external
+            />
+          </motion.div>
+        ))}
       </motion.div>
 
       <div className="mt-10 flex justify-center sm:mt-14">

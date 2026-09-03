@@ -2,8 +2,6 @@
 
 import { useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, ImageIcon } from "lucide-react";
-import { motion } from "framer-motion";
-import { revealViewport, staggerContainer, staggerItem } from "@/lib/motion-variants";
 
 const THUMB_ROW_SIZE = 4;
 
@@ -92,22 +90,11 @@ export function ApartmentGallery({
         </div>
       </div>
 
-      <motion.div
-        key={expanded ? "expanded" : "collapsed"}
-        variants={staggerContainer}
-        initial="hidden"
-        whileInView="show"
-        viewport={revealViewport}
-        className="mt-4 hidden grid-cols-4 gap-4 lg:grid"
-      >
+      <div className="mt-4 hidden grid-cols-4 gap-4 lg:grid">
         {visibleThumbs.map((src, i) => {
           const isLast = i === visibleThumbs.length - 1;
           return (
-            <motion.div
-              key={src}
-              variants={staggerItem}
-              className="relative aspect-square overflow-hidden rounded-2xl"
-            >
+            <div key={src} className="relative aspect-square overflow-hidden rounded-2xl">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={src} alt={title} className="h-full w-full object-cover" />
               {isLast && !expanded && remaining > 0 && (
@@ -116,10 +103,10 @@ export function ApartmentGallery({
                   {remaining}
                 </span>
               )}
-            </motion.div>
+            </div>
           );
         })}
-      </motion.div>
+      </div>
 
       {hasMoreThumbs && (
         <button

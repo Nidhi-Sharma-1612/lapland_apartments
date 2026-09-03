@@ -81,7 +81,7 @@ export function GuestReviewsView({ reviews }: { reviews: ReviewCard[] }) {
         onMouseLeave={() => setIsPaused(false)}
         onFocus={() => setIsPaused(true)}
         onBlur={() => setIsPaused(false)}
-        className="mt-10 flex snap-x snap-mandatory gap-5 overflow-x-auto px-6 pt-2 pb-6 scroll-pl-6 sm:mt-14 sm:gap-6 sm:px-10 sm:scroll-pl-10 lg:px-[max(3rem,calc((100%-80rem)/2))] lg:scroll-pl-[max(3rem,calc((100%-80rem)/2))]"
+        className="no-scrollbar mt-10 flex snap-x snap-mandatory gap-5 overflow-x-auto px-6 pt-2 pb-6 scroll-pl-6 sm:mt-14 sm:gap-6 sm:px-10 sm:scroll-pl-10 lg:px-[max(3rem,calc((100%-80rem)/2))] lg:scroll-pl-[max(3rem,calc((100%-80rem)/2))]"
       >
         {reviews.map((review, i) => (
           <motion.div
